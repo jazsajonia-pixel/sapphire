@@ -813,7 +813,7 @@ class GraphViewState extends State<GraphView>
   /// Inverse of [_project] for node [i]'s current depth.
   (double, double, double) _unproject(Offset p, int i) {
     final size = _projectedFor;
-    final zf = _flat.value.clamp(0.0, 1.2);
+    final zf = _flat.value.clamp(0.0, 1.2).toDouble();
     final rotation = _cameraRotation(zf);
     final k = _sk[i] == 0 ? 1.0 : _sk[i];
     final pivot = _orbitCenterIndex;
