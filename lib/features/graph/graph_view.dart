@@ -125,12 +125,9 @@ class _Vec3 {
     x * other.y - y * other.x,
   );
 
-  _Vec3 operator +(_Vec3 other) =>
-      _Vec3(x + other.x, y + other.y, z + other.z);
-  _Vec3 operator -(_Vec3 other) =>
-      _Vec3(x - other.x, y - other.y, z - other.z);
-  _Vec3 operator *(double factor) =>
-      _Vec3(x * factor, y * factor, z * factor);
+  _Vec3 operator +(_Vec3 other) => _Vec3(x + other.x, y + other.y, z + other.z);
+  _Vec3 operator -(_Vec3 other) => _Vec3(x - other.x, y - other.y, z - other.z);
+  _Vec3 operator *(double factor) => _Vec3(x * factor, y * factor, z * factor);
 }
 
 /// Unit quaternion mapping graph-world coordinates into camera coordinates.
@@ -723,15 +720,15 @@ class GraphViewState extends State<GraphView>
     }
     if (_angularVelocity.length > 0.002) {
       final speed = _angularVelocity.length;
-      _orientation = (_Quat.axisAngle(_angularVelocity, speed * dt) *
-              _orientation)
-          .normalized();
+      _orientation =
+          (_Quat.axisAngle(_angularVelocity, speed * dt) * _orientation)
+              .normalized();
       _angularVelocity = _angularVelocity * math.pow(0.04, dt).toDouble();
       active = true;
     } else if (_autoOrbit) {
-      _orientation = (_Quat.axisAngle(const _Vec3(0, 1, 0), -0.16 * dt) *
-              _orientation)
-          .normalized();
+      _orientation =
+          (_Quat.axisAngle(const _Vec3(0, 1, 0), -0.16 * dt) * _orientation)
+              .normalized();
       active = true;
     }
 
@@ -748,9 +745,7 @@ class GraphViewState extends State<GraphView>
       const _Vec3(0, 1, 0),
       -widget.cameraYaw * amount,
     );
-    return (tilt *
-            yaw *
-            _Quat.slerp(_Quat.identity, _orientation, amount))
+    return (tilt * yaw * _Quat.slerp(_Quat.identity, _orientation, amount))
         .normalized();
   }
 
@@ -801,11 +796,7 @@ class GraphViewState extends State<GraphView>
     final py = pivot == null ? 0.0 : _y[pivot];
     final pz = pivot == null ? 0.0 : _z[pivot] * zf;
     for (var i = 0; i < _n; i++) {
-      final world = _Vec3(
-        _x[i] - px,
-        _y[i] - py,
-        _z[i] * zf - pz,
-      );
+      final world = _Vec3(_x[i] - px, _y[i] - py, _z[i] * zf - pz);
       final camera = rotation.rotate(world);
       final k = f / (f + math.max(camera.z, -f * 0.8));
       _sx[i] = ox + (px + camera.x * k) * _scale;
