@@ -346,10 +346,7 @@ void main() {
       point(0.95, 0.95),
       point(0.05, 0.95),
     ];
-    await tester.dragFrom(
-      corners[0],
-      corners[1] - corners[0],
-    );
+    await tester.dragFrom(corners[0], corners[1] - corners[0]);
     await tester.pump(const Duration(milliseconds: 16));
     final rolled = state.cameraOrientation;
     expect(rolled[3].abs(), greaterThan(0.05));
@@ -358,10 +355,7 @@ void main() {
       for (var i = 0; i < corners.length; i++) {
         final from = corners[i];
         final to = corners[(i + 1) % corners.length];
-        await tester.dragFrom(
-          from,
-          to - from,
-        );
+        await tester.dragFrom(from, to - from);
       }
     }
 
