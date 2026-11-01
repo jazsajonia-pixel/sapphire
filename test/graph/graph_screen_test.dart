@@ -326,4 +326,44 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('3D trackball allows sideways roll and repeated full turns', (
+    tester,
+  ) async {
+    await pumpSapphire(tester, storage: _storage());
+    await _graph(tester);
+    final state = tester.state<GraphViewState>(find.byType(GraphView));
+    final canvas = find.byKey(GraphView.canvasKey);
+    final box = tester.renderObject<RenderBox>(canvas);
+    final origin = box.localToGlobal(Offset.zero);
+    final width = box.size.width;
+    final height = box.size.height;
+    Offset point(double x, double y) =>
+        origin + Offset(width * x, height * y);
+
+    final gesture = await tester.startGesture(point(0.5, 0.05));
+    await gesture.moveTo(point(0.95, 0.5));
+    await tester.pump(const Duration(milliseconds: 16));
+    final rolled = state.cameraOrientation;
+    expect(rolled[3].abs(), greaterThan(0.05));
+
+    for (var turn = 0; turn < 3; turn++) {
+      await gesture.moveTo(point(0.5, 0.95));
+      await gesture.moveTo(point(0.05, 0.5));
+      await gesture.moveTo(point(0.5, 0.05));
+      await gesture.moveTo(point(0.95, 0.5));
+    }
+    await gesture.up();
+    await tester.pump(const Duration(milliseconds: 16));
+
+    final orientation = state.cameraOrientation;
+    final norm = orientation.fold<double>(
+      0,
+      (sum, component) => sum + component * component,
+    );
+    expect(norm, closeTo(1, 1e-6));
+    expect(orientation.any((component) => !component.isFinite), isFalse);
+    expect(tester.takeException(), isNull);
+  });
+
 }
