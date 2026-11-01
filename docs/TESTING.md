@@ -83,7 +83,7 @@ Sign in with GitHub and automatic sync:
 32. Edit a note in Sapphire → about 3 s after detection the commit is on github.com.
 33. Turn off Sync automatically → edit a note → verify no automatic commit;
     Sync now still works. Turn it back on. Check changed notes receive the mint
-    graph accent and that 3D drag follows the finger through a full orbit.
+    graph accent. In 3D, drag in circles and diagonals, roll the graph fully upside down and sideways, and verify it follows the finger continuously without a pitch limit. Pinch to zoom and drag a node after rotating.
 34. Delete a note on github.com → after the next sync it is gone on the phone
     and its last content is in note history. Delete one on the phone → it is
     deleted on GitHub.

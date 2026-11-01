@@ -8,8 +8,7 @@ emulator job (API 34) that runs the on-device tests in `integration_test/`.
 The APK is uploaded as the `sapphire-android-apk` artifact (30 days) together
 with its SHA-256 checksum. The run's summary page states how the APK was signed.
 
-- Version name: from `pubspec.yaml` (currently `0.9.0`, a pre-release: not yet
-  tested on a real phone).
+- Version name: from `pubspec.yaml` (currently `1.1.2`; the full-globe camera release is pending CI and real-phone verification).
 - Version code: the number of commits up to the built commit (same in CI
   and Release builds), so later builds can upgrade earlier ones **when signed
   with the same key**.
@@ -26,7 +25,7 @@ as pre-releases.
 
 ```sh
 git checkout main && git pull
-git tag v0.9.0 && git push origin v0.9.0
+git tag v1.1.2 && git push origin v1.1.2
 ```
 
 Release downloads do not expire (unlike CI artifacts, kept 30 days) and do
