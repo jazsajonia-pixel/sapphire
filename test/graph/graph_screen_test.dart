@@ -365,5 +365,4 @@ void main() {
     expect(orientation.any((component) => !component.isFinite), isFalse);
     expect(tester.takeException(), isNull);
   });
-
 }
