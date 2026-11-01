@@ -125,9 +125,12 @@ class _Vec3 {
     x * other.y - y * other.x,
   );
 
-  _Vec3 operator +(_Vec3 other) => _Vec3(x + other.x, y + other.y, z + other.z);
-  _Vec3 operator -(_Vec3 other) => _Vec3(x - other.x, y - other.y, z - other.z);
-  _Vec3 operator * (double factor) => _Vec3(x * factor, y * factor, z * factor);
+  _Vec3 operator +(_Vec3 other) =>
+      _Vec3(x + other.x, y + other.y, z + other.z);
+  _Vec3 operator -(_Vec3 other) =>
+      _Vec3(x - other.x, y - other.y, z - other.z);
+  _Vec3 operator *(double factor) =>
+      _Vec3(x * factor, y * factor, z * factor);
 }
 
 /// Unit quaternion mapping graph-world coordinates into camera coordinates.
@@ -165,8 +168,12 @@ class _Quat {
     final half = angle / 2;
     final unit = axis.normalized();
     final sine = math.sin(half);
-    return _Quat(math.cos(half), unit.x * sine, unit.y * sine, unit.z * sine)
-        .normalized();
+    return _Quat(
+      math.cos(half),
+      unit.x * sine,
+      unit.y * sine,
+      unit.z * sine,
+    ).normalized();
   }
 
   /// Shortest rotation carrying [from] onto [to], including antipodal input.
@@ -185,8 +192,11 @@ class _Quat {
 
   static _Quat slerp(_Quat from, _Quat to, double t) {
     var target = to;
-    var dot = from.w * target.w + from.x * target.x +
-        from.y * target.y + from.z * target.z;
+    var dot =
+        from.w * target.w +
+        from.x * target.x +
+        from.y * target.y +
+        from.z * target.z;
     if (dot < 0) {
       target = _Quat(-target.w, -target.x, -target.y, -target.z);
       dot = -dot;
@@ -770,8 +780,7 @@ class GraphViewState extends State<GraphView>
     );
     final speed = delta.angle / elapsed;
     final instant = delta.axis * speed;
-    _angularVelocity =
-        _angularVelocity * 0.42 + instant * 0.58;
+    _angularVelocity = _angularVelocity * 0.42 + instant * 0.58;
   }
 
   // ---- Projection ----------------------------------------------------------
