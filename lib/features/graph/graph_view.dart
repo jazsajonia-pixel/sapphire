@@ -104,6 +104,122 @@ class GraphView extends StatefulWidget {
   State<GraphView> createState() => GraphViewState();
 }
 
+/// Small immutable vector used by the virtual trackball camera.
+class _Vec3 {
+  const _Vec3(this.x, this.y, this.z);
+  static const zero = _Vec3(0, 0, 0);
+  final double x;
+  final double y;
+  final double z;
+
+  double get length => math.sqrt(x * x + y * y + z * z);
+  _Vec3 normalized() {
+    final size = length;
+    return size < 1e-12 ? const _Vec3(0, 0, 1) : this * (1 / size);
+  }
+
+  double dot(_Vec3 other) => x * other.x + y * other.y + z * other.z;
+  _Vec3 cross(_Vec3 other) => _Vec3(
+    y * other.z - z * other.y,
+    z * other.x - x * other.z,
+    x * other.y - y * other.x,
+  );
+
+  _Vec3 operator +(_Vec3 other) => _Vec3(x + other.x, y + other.y, z + other.z);
+  _Vec3 operator -(_Vec3 other) => _Vec3(x - other.x, y - other.y, z - other.z);
+  _Vec3 operator * (double factor) => _Vec3(x * factor, y * factor, z * factor);
+}
+
+/// Unit quaternion mapping graph-world coordinates into camera coordinates.
+class _Quat {
+  const _Quat(this.w, this.x, this.y, this.z);
+  static const identity = _Quat(1, 0, 0, 0);
+  final double w;
+  final double x;
+  final double y;
+  final double z;
+
+  _Quat normalized() {
+    final size = math.sqrt(w * w + x * x + y * y + z * z);
+    return size < 1e-12
+        ? identity
+        : _Quat(w / size, x / size, y / size, z / size);
+  }
+
+  _Quat conjugate() => _Quat(w, -x, -y, -z);
+
+  _Quat operator *(_Quat other) => _Quat(
+    w * other.w - x * other.x - y * other.y - z * other.z,
+    w * other.x + x * other.w + y * other.z - z * other.y,
+    w * other.y - x * other.z + y * other.w + z * other.x,
+    w * other.z + x * other.y - y * other.x + z * other.w,
+  );
+
+  _Vec3 rotate(_Vec3 vector) {
+    final q = _Vec3(x, y, z);
+    final twice = q.cross(vector) * 2;
+    return vector + twice * w + q.cross(twice);
+  }
+
+  static _Quat axisAngle(_Vec3 axis, double angle) {
+    final half = angle / 2;
+    final unit = axis.normalized();
+    final sine = math.sin(half);
+    return _Quat(math.cos(half), unit.x * sine, unit.y * sine, unit.z * sine)
+        .normalized();
+  }
+
+  /// Shortest rotation carrying [from] onto [to], including antipodal input.
+  static _Quat fromTo(_Vec3 from, _Vec3 to) {
+    final a = from.normalized();
+    final b = to.normalized();
+    final dot = a.dot(b).clamp(-1.0, 1.0);
+    if (dot < -0.999999) {
+      var axis = a.cross(const _Vec3(1, 0, 0));
+      if (axis.length < 1e-6) axis = a.cross(const _Vec3(0, 1, 0));
+      return axisAngle(axis, math.pi);
+    }
+    final cross = a.cross(b);
+    return _Quat(1 + dot, cross.x, cross.y, cross.z).normalized();
+  }
+
+  static _Quat slerp(_Quat from, _Quat to, double t) {
+    var target = to;
+    var dot = from.w * target.w + from.x * target.x +
+        from.y * target.y + from.z * target.z;
+    if (dot < 0) {
+      target = _Quat(-target.w, -target.x, -target.y, -target.z);
+      dot = -dot;
+    }
+    if (dot > 0.9995) {
+      return _Quat(
+        from.w + (target.w - from.w) * t,
+        from.x + (target.x - from.x) * t,
+        from.y + (target.y - from.y) * t,
+        from.z + (target.z - from.z) * t,
+      ).normalized();
+    }
+    final theta = math.acos(dot.clamp(-1.0, 1.0));
+    final sine = math.sin(theta);
+    final a = math.sin((1 - t) * theta) / sine;
+    final b = math.sin(t * theta) / sine;
+    return _Quat(
+      from.w * a + target.w * b,
+      from.x * a + target.x * b,
+      from.y * a + target.y * b,
+      from.z * a + target.z * b,
+    ).normalized();
+  }
+
+  double get angle => 2 * math.acos(w.clamp(-1.0, 1.0));
+  _Vec3 get axis {
+    final sine = math.sqrt(math.max(0, 1 - w * w));
+    return sine < 1e-6
+        ? const _Vec3(0, 1, 0)
+        : _Vec3(x / sine, y / sine, z / sine).normalized();
+  }
+}
+
 /// Critically under-damped spring for bouncy UI values.
 class _Spring {
   _Spring(this.value) : target = value;
@@ -151,8 +267,11 @@ class GraphViewState extends State<GraphView>
   // ---- Camera --------------------------------------------------------------
   double _scale = 1;
   Offset _pan = Offset.zero;
-  double _yaw = 0.5, _pitch = 0.0;
-  double _yawVel = 0, _pitchVel = 0;
+  // Full orientation and angular momentum; unlike Euler angles this has no
+  // pitch singularity or artificial pole clamp.
+  _Quat _orientation = _Quat.axisAngle(const _Vec3(0, 1, 0), -0.5);
+  _Vec3 _angularVelocity = _Vec3.zero;
+  _Vec3? _lastTrackball;
   final _flat = _Spring(1); // 1 = 3D, 0 = flat 2D
   Size? _viewport;
   bool _fitted = false;
@@ -196,7 +315,6 @@ class GraphViewState extends State<GraphView>
   void initState() {
     super.initState();
     _flat.value = _flat.target = widget.threeDimensional ? 1 : 0;
-    _yaw = widget.threeDimensional ? 0.5 : 0;
     _initFrom(widget.data, widget.layout, keep: const {});
   }
 
@@ -555,7 +673,8 @@ class GraphViewState extends State<GraphView>
     _grab.snap();
     _focusAmt.snap();
     _ripple = 1;
-    _yawVel = _pitchVel = 0;
+    _angularVelocity = _Vec3.zero;
+    _lastTrackball = null;
     if (_dragIndex != null) _simulate();
   }
 
@@ -592,20 +711,67 @@ class GraphViewState extends State<GraphView>
       _ripple = math.min(1, _ripple + dt / 0.55);
       active = true;
     }
-    if (_yawVel.abs() > 0.002 || _pitchVel.abs() > 0.002) {
-      _yaw += _yawVel * dt;
-      _pitch = (_pitch + _pitchVel * dt).clamp(-1.35, 1.35);
-      final decay = math.pow(0.04, dt).toDouble();
-      _yawVel *= decay;
-      _pitchVel *= decay;
+    if (_angularVelocity.length > 0.002) {
+      final speed = _angularVelocity.length;
+      _orientation = (_Quat.axisAngle(_angularVelocity, speed * dt) *
+              _orientation)
+          .normalized();
+      _angularVelocity = _angularVelocity * math.pow(0.04, dt).toDouble();
       active = true;
     } else if (_autoOrbit) {
-      _yaw += 0.16 * dt;
+      _orientation = (_Quat.axisAngle(const _Vec3(0, 1, 0), -0.16 * dt) *
+              _orientation)
+          .normalized();
       active = true;
     }
 
     _frame.value++;
     if (!active) _ticker.stop();
+  }
+
+  _Quat _cameraRotation(double amount) {
+    final tilt = _Quat.axisAngle(
+      const _Vec3(1, 0, 0),
+      widget.cameraTilt * amount,
+    );
+    final yaw = _Quat.axisAngle(
+      const _Vec3(0, 1, 0),
+      -widget.cameraYaw * amount,
+    );
+    return (tilt *
+            yaw *
+            _Quat.slerp(_Quat.identity, _orientation, amount))
+        .normalized();
+  }
+
+  /// Maps the canvas to a sphere with a continuous hyperbolic rim.
+  _Vec3 _trackballVector(Offset point) {
+    final size = _viewport!;
+    final radius = math.max(1.0, math.min(size.width, size.height) / 2);
+    final x = (point.dx - size.width / 2) / radius;
+    final y = (size.height / 2 - point.dy) / radius;
+    final distanceSquared = x * x + y * y;
+    final z = distanceSquared <= 0.5
+        ? math.sqrt(1 - distanceSquared)
+        : 0.5 / math.sqrt(distanceSquared);
+    return _Vec3(x, y, z).normalized();
+  }
+
+  void _applyTrackballMove(Offset point, Duration stamp) {
+    final previous = _lastTrackball;
+    final current = _trackballVector(point);
+    _lastTrackball = current;
+    if (previous == null) return;
+    final delta = _Quat.fromTo(current, previous);
+    _orientation = (delta * _orientation).normalized();
+    final elapsed = math.max(
+      0.001,
+      (stamp - _lastMoveStamp).inMicroseconds / 1e6,
+    );
+    final speed = delta.angle / elapsed;
+    final instant = delta.axis * speed;
+    _angularVelocity =
+        _angularVelocity * 0.42 + instant * 0.58;
   }
 
   // ---- Projection ----------------------------------------------------------
@@ -618,10 +784,7 @@ class GraphViewState extends State<GraphView>
     _projectedFrame = _frame.value;
     _projectedFor = size;
     final zf = _flat.value.clamp(0.0, 1.2);
-    final yaw = (_yaw + widget.cameraYaw) * zf;
-    final pitch = (_pitch + widget.cameraTilt) * zf;
-    final cy = math.cos(yaw), sy = math.sin(yaw);
-    final cp = math.cos(pitch), sp = math.sin(pitch);
+    final rotation = _cameraRotation(zf);
     final f = _focal;
     final ox = size.width / 2 + _pan.dx, oy = size.height / 2 + _pan.dy;
     final pivot = _orbitCenterIndex;
@@ -629,16 +792,17 @@ class GraphViewState extends State<GraphView>
     final py = pivot == null ? 0.0 : _y[pivot];
     final pz = pivot == null ? 0.0 : _z[pivot] * zf;
     for (var i = 0; i < _n; i++) {
-      final x = _x[i] - px, y = _y[i] - py, z = _z[i] * zf - pz;
-      final x1 = x * cy - z * sy;
-      final z1 = x * sy + z * cy;
-      final y2 = y * cp - z1 * sp;
-      final z2 = y * sp + z1 * cp;
-      final k = f / (f + math.max(z2, -f * 0.8));
-      _sx[i] = ox + (px + x1 * k) * _scale;
-      _sy[i] = oy + (py + y2 * k) * _scale;
+      final world = _Vec3(
+        _x[i] - px,
+        _y[i] - py,
+        _z[i] * zf - pz,
+      );
+      final camera = rotation.rotate(world);
+      final k = f / (f + math.max(camera.z, -f * 0.8));
+      _sx[i] = ox + (px + camera.x * k) * _scale;
+      _sy[i] = oy + (py + camera.y * k) * _scale;
       _sk[i] = k;
-      _sd[i] = z2;
+      _sd[i] = camera.z;
     }
     if (zf > 0.01) {
       final list = _order.toList()..sort((a, b) => _sd[b].compareTo(_sd[a]));
@@ -650,23 +814,23 @@ class GraphViewState extends State<GraphView>
   (double, double, double) _unproject(Offset p, int i) {
     final size = _projectedFor;
     final zf = _flat.value.clamp(0.0, 1.2);
-    final yaw = (_yaw + widget.cameraYaw) * zf;
-    final pitch = (_pitch + widget.cameraTilt) * zf;
+    final rotation = _cameraRotation(zf);
     final k = _sk[i] == 0 ? 1.0 : _sk[i];
     final pivot = _orbitCenterIndex;
     final px = pivot == null ? 0.0 : _x[pivot];
     final py = pivot == null ? 0.0 : _y[pivot];
     final pz = pivot == null ? 0.0 : _z[pivot] * zf;
-    final x1 = ((p.dx - size.width / 2 - _pan.dx) / _scale - px) / k;
-    final y2 = ((p.dy - size.height / 2 - _pan.dy) / _scale - py) / k;
-    final z2 = _sd[i];
-    final cp = math.cos(pitch), sp = math.sin(pitch);
-    final y = y2 * cp + z2 * sp;
-    final z1 = -y2 * sp + z2 * cp;
-    final cy = math.cos(yaw), sy = math.sin(yaw);
-    final x = x1 * cy + z1 * sy;
-    final z = -x1 * sy + z1 * cy;
-    return (x + px, y + py, zf > 0.05 ? (z + pz) / zf : _z[i]);
+    final camera = _Vec3(
+      ((p.dx - size.width / 2 - _pan.dx) / _scale - px) / k,
+      ((p.dy - size.height / 2 - _pan.dy) / _scale - py) / k,
+      _sd[i],
+    );
+    final world = rotation.conjugate().rotate(camera);
+    return (
+      world.x + px,
+      world.y + py,
+      zf > 0.05 ? (world.z + pz) / zf : _z[i],
+    );
   }
 
   double _screenRadius(int i) {
@@ -797,9 +961,12 @@ class GraphViewState extends State<GraphView>
       reset: () {
         final s = _viewport;
         if (s == null) return;
-        _yaw = _threeD ? 0.5 : 0;
-        _pitch = 0;
-        _yawVel = _pitchVel = 0;
+        _orientation = _Quat.axisAngle(
+          const _Vec3(0, 1, 0),
+          _threeD ? -0.5 : 0,
+        );
+        _angularVelocity = _Vec3.zero;
+        _lastTrackball = null;
         _fit(s);
         _autoFit = true;
         _kick();
@@ -818,7 +985,7 @@ class GraphViewState extends State<GraphView>
 
   void _onDown(PointerDownEvent e) {
     _pointers[e.pointer] = e.localPosition;
-    _yawVel = _pitchVel = 0;
+    _angularVelocity = _Vec3.zero;
     if (_pointers.length == 1) {
       _downPos = e.localPosition;
       _downStamp = e.timeStamp;
@@ -838,6 +1005,9 @@ class GraphViewState extends State<GraphView>
         HapticFeedback.selectionClick();
       } else {
         _gesture = _Gesture.camera;
+        _lastTrackball = _flat.target > 0.5
+            ? _trackballVector(e.localPosition)
+            : null;
       }
     } else if (_pointers.length == 2) {
       _releaseNode(tapped: false);
@@ -849,6 +1019,8 @@ class GraphViewState extends State<GraphView>
   void _startPinch() {
     final pts = _pointers.values.toList();
     _gesture = _Gesture.pinch;
+    _angularVelocity = _Vec3.zero;
+    _lastTrackball = null;
     _moved = true;
     _pinchDist = math.max(1, (pts[0] - pts[1]).distance);
     _pinchFocal = (pts[0] + pts[1]) / 2;
@@ -877,22 +1049,14 @@ class GraphViewState extends State<GraphView>
       case _Gesture.camera:
         if (!_moved) return;
         if (_flat.target <= 0.5) _autoFit = false;
-        final dtMs = math.max(1, (e.timeStamp - _lastMoveStamp).inMilliseconds);
-        _lastMoveStamp = e.timeStamp;
         if (_flat.target > 0.5) {
-          // Track the finger directly: a full-width swipe is a full orbit.
-          // Decaying velocity continues the gesture smoothly on release.
-          final yawDelta =
-              delta.dx / math.max(1, _viewport!.width) * math.pi * 2;
-          final pitchDelta =
-              -delta.dy / math.max(1, _viewport!.height) * math.pi;
-          _yaw += yawDelta;
-          _pitch = (_pitch + pitchDelta).clamp(-1.35, 1.35);
-          _yawVel = _yawVel * 0.42 + yawDelta / dtMs * 1000 * 0.58;
-          _pitchVel = _pitchVel * 0.42 + pitchDelta / dtMs * 1000 * 0.58;
+          // The shortest-arc quaternion between consecutive sphere points
+          // makes the graph follow the finger through poles and full rolls.
+          _applyTrackballMove(e.localPosition, e.timeStamp);
         } else {
           _pan += delta;
         }
+        _lastMoveStamp = e.timeStamp;
         _projectedFrame = -1;
         _frame.value++;
       case _Gesture.pinch:
@@ -940,14 +1104,12 @@ class GraphViewState extends State<GraphView>
         _gesture = _Gesture.none;
         if (tapped) widget.onNodeTap(widget.data.nodes[i].path);
       case _Gesture.camera:
-        if (!cancelled && !_moved && quick) {
-          _setFocus(null);
-          _yawVel = _pitchVel = 0;
-        }
+        if (!cancelled && !_moved && quick) _setFocus(null);
         if (_reduceMotion ||
             (e.timeStamp - _lastMoveStamp).inMilliseconds > 80) {
-          _yawVel = _pitchVel = 0;
+          _angularVelocity = _Vec3.zero;
         }
+        _lastTrackball = null;
         _gesture = _Gesture.none;
       case _Gesture.pinch:
         if (_pointers.length == 1) {
@@ -955,10 +1117,14 @@ class GraphViewState extends State<GraphView>
           _gesture = _Gesture.camera;
           _downPos = _pointers.values.first;
           _lastMoveStamp = e.timeStamp;
+          _lastTrackball = _flat.target > 0.5
+              ? _trackballVector(_downPos)
+              : null;
         } else if (_pointers.isEmpty) {
           _gesture = _Gesture.none;
+          _lastTrackball = null;
         }
-        _yawVel = _pitchVel = 0;
+        _angularVelocity = _Vec3.zero;
       case _Gesture.none:
         break;
     }
@@ -1033,6 +1199,15 @@ class GraphViewState extends State<GraphView>
 
   @visibleForTesting
   double get cameraScale => _scale;
+
+  /// Unit quaternion components, exposed for deterministic gesture tests.
+  @visibleForTesting
+  List<double> get cameraOrientation => [
+    _orientation.w,
+    _orientation.x,
+    _orientation.y,
+    _orientation.z,
+  ];
 
   /// Path of the note whose links are currently highlighted, if any.
   @visibleForTesting
