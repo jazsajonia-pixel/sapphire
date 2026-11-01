@@ -762,7 +762,7 @@ class GraphViewState extends State<GraphView>
     final current = _trackballVector(point);
     _lastTrackball = current;
     if (previous == null) return;
-    final delta = _Quat.fromTo(current, previous);
+    final delta = _Quat.fromTo(previous, current);
     _orientation = (delta * _orientation).normalized();
     final elapsed = math.max(
       0.001,
