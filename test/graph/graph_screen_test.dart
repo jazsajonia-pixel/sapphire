@@ -340,19 +340,33 @@ void main() {
     final height = box.size.height;
     Offset point(double x, double y) => origin + Offset(width * x, height * y);
 
-    final gesture = await tester.startGesture(point(0.05, 0.05));
-    await gesture.moveTo(point(0.95, 0.05));
+    final corners = [
+      point(0.05, 0.05),
+      point(0.95, 0.05),
+      point(0.95, 0.95),
+      point(0.05, 0.95),
+    ];
+    await tester.dragFrom(
+      corners[0],
+      corners[1] - corners[0],
+      duration: const Duration(milliseconds: 100),
+    );
     await tester.pump(const Duration(milliseconds: 16));
     final rolled = state.cameraOrientation;
     expect(rolled[3].abs(), greaterThan(0.05));
 
     for (var turn = 0; turn < 3; turn++) {
-      await gesture.moveTo(point(0.95, 0.95));
-      await gesture.moveTo(point(0.05, 0.95));
-      await gesture.moveTo(point(0.05, 0.05));
-      await gesture.moveTo(point(0.95, 0.05));
+      for (var i = 0; i < corners.length; i++) {
+        final from = corners[i];
+        final to = corners[(i + 1) % corners.length];
+        await tester.dragFrom(
+          from,
+          to - from,
+          duration: const Duration(milliseconds: 100),
+        );
+      }
     }
-    await gesture.up();
+
     await tester.pump(const Duration(milliseconds: 16));
 
     final orientation = state.cameraOrientation;
