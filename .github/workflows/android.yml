@@ -49,11 +49,6 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Print formatter output for changed files
-        run: |
-          dart format --output=show lib/features/graph/graph_view.dart
-          dart format --output=show test/graph/graph_screen_test.dart
-
       - name: Verify formatting
         run: dart format --output=none --set-exit-if-changed lib test integration_test
 
