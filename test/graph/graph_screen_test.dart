@@ -338,8 +338,7 @@ void main() {
     final origin = box.localToGlobal(Offset.zero);
     final width = box.size.width;
     final height = box.size.height;
-    Offset point(double x, double y) =>
-        origin + Offset(width * x, height * y);
+    Offset point(double x, double y) => origin + Offset(width * x, height * y);
 
     final gesture = await tester.startGesture(point(0.5, 0.05));
     await gesture.moveTo(point(0.95, 0.5));
