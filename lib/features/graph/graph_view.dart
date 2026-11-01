@@ -173,7 +173,7 @@ class _Quat {
   static _Quat fromTo(_Vec3 from, _Vec3 to) {
     final a = from.normalized();
     final b = to.normalized();
-    final dot = a.dot(b).clamp(-1.0, 1.0);
+    final dot = a.dot(b).clamp(-1.0, 1.0).toDouble();
     if (dot < -0.999999) {
       var axis = a.cross(const _Vec3(1, 0, 0));
       if (axis.length < 1e-6) axis = a.cross(const _Vec3(0, 1, 0));
@@ -783,7 +783,7 @@ class GraphViewState extends State<GraphView>
     if (_projectedFrame == _frame.value && _projectedFor == size) return;
     _projectedFrame = _frame.value;
     _projectedFor = size;
-    final zf = _flat.value.clamp(0.0, 1.2);
+    final zf = _flat.value.clamp(0.0, 1.2).toDouble();
     final rotation = _cameraRotation(zf);
     final f = _focal;
     final ox = size.width / 2 + _pan.dx, oy = size.height / 2 + _pan.dy;
