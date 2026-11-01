@@ -773,7 +773,7 @@ class GraphViewState extends State<GraphView>
       0.001,
       (stamp - _lastMoveStamp).inMicroseconds / 1e6,
     );
-    final speed = delta.angle / elapsed;
+    final speed = (delta.angle / elapsed).clamp(0.0, 12.0).toDouble();
     final instant = delta.axis * speed;
     _angularVelocity = _angularVelocity * 0.42 + instant * 0.58;
   }
