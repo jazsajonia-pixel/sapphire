@@ -349,7 +349,6 @@ void main() {
     await tester.dragFrom(
       corners[0],
       corners[1] - corners[0],
-      duration: const Duration(milliseconds: 100),
     );
     await tester.pump(const Duration(milliseconds: 16));
     final rolled = state.cameraOrientation;
@@ -362,7 +361,6 @@ void main() {
         await tester.dragFrom(
           from,
           to - from,
-          duration: const Duration(milliseconds: 100),
         );
       }
     }
