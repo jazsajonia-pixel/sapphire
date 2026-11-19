@@ -1,45 +1,55 @@
 import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
 import 'package:flutter/material.dart';
 
-/// Sapphire visual identity: a deep navy canvas with crisp sapphire-blue
-/// accents, ice-cyan highlights and solid jewel tones for the graph.
+/// Sapphire visual identity ("Deep Sapphire"): neutral blue-black slate
+/// surfaces so the jewel blue is the only saturated color in the chrome,
+/// a silver secondary, violet reserved for AI-inferred/derived things, and a
+/// graph palette taken from the colors natural sapphires come in.
 abstract final class SapphireTheme {
-  /// Primary accent: a luminous sapphire blue that keeps AA contrast on ink.
-  static const Color sapphire = Color(0xFF7AA2FF);
-  static const Color sapphireDeep = Color(0xFF2F5BEA);
-  static const Color ice = Color(0xFF8ED8FF);
-  static const Color violet = Color(0xFFB7A6FF);
-  static const Color ink = Color(0xFF060A16);
-  static const Color surface = Color(0xFF0A1020);
-  static const Color surfaceLow = Color(0xFF0F1729);
-  static const Color surfaceMid = Color(0xFF131D33);
-  static const Color surfaceHigh = Color(0xFF19253F);
-  static const Color surfaceHighest = Color(0xFF21304F);
-  static const Color onSurface = Color(0xFFE6ECF8);
-  static const Color onSurfaceVariant = Color(0xFFA3B0C8);
-  static const Color outline = Color(0xFF7D8AA6);
-  static const Color outlineVariant = Color(0xFF2C3A57);
+  /// Primary accent: the gem's lit-facet blue. AA contrast on every surface.
+  static const Color sapphire = Color(0xFF5E95FF);
+  static const Color sapphireDeep = Color(0xFF1E4FD0);
 
-  /// Solid, distinct colors for graph nodes (one per folder group).
+  /// Silver highlight (white sapphire) used as the secondary role.
+  static const Color ice = Color(0xFFC3CEE0);
+
+  /// Violet sapphire: AI-inferred links and AI surfaces only.
+  static const Color violet = Color(0xFFA98BFF);
+  static const Color ink = Color(0xFF05080F);
+  static const Color surface = Color(0xFF0A0F1A);
+  static const Color surfaceLow = Color(0xFF0F1522);
+  static const Color surfaceMid = Color(0xFF141C2C);
+  static const Color surfaceHigh = Color(0xFF1A2438);
+  static const Color surfaceHighest = Color(0xFF222E46);
+  static const Color onSurface = Color(0xFFE8EDF6);
+  static const Color onSurfaceVariant = Color(0xFFA7B2C6);
+  static const Color outline = Color(0xFF7F8BA3);
+  static const Color outlineVariant = Color(0xFF2A3449);
+
+  /// Notes changed by the latest sync (mint, distinct from every node color).
+  static const Color changed = Color(0xFF69E6C1);
+
+  /// Solid, distinct colors for graph nodes (one per folder group), named
+  /// after sapphire varieties.
   static const List<Color> nodePalette = [
-    Color(0xFF5B8CFF), // sapphire
-    Color(0xFF3CC8F0), // cyan
-    Color(0xFF9B7BFF), // violet
-    Color(0xFF2FD3B2), // teal
-    Color(0xFFFFB547), // amber
-    Color(0xFFFF6B8B), // rose
-    Color(0xFFA6E35A), // lime
-    Color(0xFFFF8A5B), // coral
-    Color(0xFF7FC4FF), // sky
-    Color(0xFFE07BFF), // orchid
+    Color(0xFF4F86F7), // royal blue
+    Color(0xFF5CC8F2), // ceylon
+    Color(0xFFF5C451), // yellow sapphire
+    Color(0xFFFF9A76), // padparadscha
+    Color(0xFFA98BFF), // violet sapphire
+    Color(0xFF2CB8C7), // teal sapphire
+    Color(0xFFF07AB0), // pink sapphire
+    Color(0xFF8CCB6B), // green sapphire
+    Color(0xFFD9E2F2), // white sapphire
+    Color(0xFF8AA0C8), // steel
   ];
-  static const Color unresolvedNode = Color(0xFF5E6A85);
+  static const Color unresolvedNode = Color(0xFF59647C);
 
   /// Soft background glow used behind hero areas.
   static const RadialGradient heroGlow = RadialGradient(
     center: Alignment(-0.6, -0.9),
     radius: 1.3,
-    colors: [Color(0x332F5BEA), Color(0x00060A16)],
+    colors: [Color(0x261E4FD0), Color(0x0005080F)],
   );
 
   static ThemeData dark() {
@@ -50,16 +60,16 @@ abstract final class SapphireTheme {
         ).copyWith(
           primary: sapphire,
           onPrimary: ink,
-          primaryContainer: const Color(0xFF1C3A8A),
-          onPrimaryContainer: const Color(0xFFDCE6FF),
+          primaryContainer: const Color(0xFF163DA6),
+          onPrimaryContainer: const Color(0xFFDCE7FF),
           secondary: ice,
-          onSecondary: const Color(0xFF00354A),
-          secondaryContainer: const Color(0xFF15405A),
-          onSecondaryContainer: const Color(0xFFCDEEFF),
+          onSecondary: const Color(0xFF1A2333),
+          secondaryContainer: const Color(0xFF2A3550),
+          onSecondaryContainer: const Color(0xFFE1E8F4),
           tertiary: violet,
-          onTertiary: const Color(0xFF2A1A66),
-          tertiaryContainer: const Color(0xFF3B2F7A),
-          onTertiaryContainer: const Color(0xFFE6DEFF),
+          onTertiary: const Color(0xFF241660),
+          tertiaryContainer: const Color(0xFF3A2C78),
+          onTertiaryContainer: const Color(0xFFE8E0FF),
           error: const Color(0xFFFFB4AB),
           onError: const Color(0xFF690005),
           errorContainer: const Color(0xFF93000A),
@@ -210,21 +220,20 @@ abstract final class SapphireTheme {
   }
 }
 
-/// Sapphire's mark: a front-view cut gem (table, crown and pavilion facets)
-/// lit from the upper left, with a small sparkle. Drawn with the same
-/// geometry as the Android launcher icon, so the brand stays consistent and
-/// crisp at any size without raster assets.
+/// Sapphire's mark: a step-cut sapphire seen from above whose table is a
+/// note page with a folded corner (a gem that holds your notes). Flat facets,
+/// no outlines or sparkles, so it reads at 24 dp and in one color. The
+/// Android launcher icon, splash and `tool/make_icons.py` use exactly this
+/// geometry ([outer], [table], [fold]).
 class SapphireMark extends StatelessWidget {
   const SapphireMark({
     super.key,
     this.size = 40,
     this.semanticsLabel = 'Sapphire',
-    this.sparkle = true,
   });
 
   final double size;
   final String semanticsLabel;
-  final bool sparkle;
 
   @override
   Widget build(BuildContext context) {
@@ -233,43 +242,65 @@ class SapphireMark extends StatelessWidget {
       image: true,
       child: SizedBox.square(
         dimension: size,
-        child: CustomPaint(painter: SapphireMarkPainter(sparkle: sparkle)),
+        child: const CustomPaint(painter: SapphireMarkPainter()),
       ),
     );
   }
 }
 
 class SapphireMarkPainter extends CustomPainter {
-  const SapphireMarkPainter({this.sparkle = true, this.glint = 0});
-
-  final bool sparkle;
+  const SapphireMarkPainter({this.glint = 0});
 
   /// 0..1 position of a moving light glint across the gem (0 = none).
   final double glint;
 
-  /// Facets in unit coordinates with their solid fill colors.
-  static const facets = <(List<Offset>, Color)>[
-    // Crown (upper) facets.
-    ([Offset(.28, .16), Offset(.06, .40), Offset(.30, .40)], Color(0xFF6E9CFF)),
-    ([Offset(.28, .16), Offset(.50, .16), Offset(.30, .40)], Color(0xFFA9CBFF)),
-    ([Offset(.50, .16), Offset(.30, .40), Offset(.70, .40)], Color(0xFFD3E6FF)),
-    ([Offset(.50, .16), Offset(.72, .16), Offset(.70, .40)], Color(0xFF7FA9FF)),
-    ([Offset(.72, .16), Offset(.94, .40), Offset(.70, .40)], Color(0xFF3D6CF0)),
-    // Pavilion (lower) facets.
-    ([Offset(.06, .40), Offset(.30, .40), Offset(.50, .90)], Color(0xFF2F62E6)),
-    ([Offset(.30, .40), Offset(.70, .40), Offset(.50, .90)], Color(0xFF1D46BE)),
-    ([Offset(.70, .40), Offset(.94, .40), Offset(.50, .90)], Color(0xFF12318E)),
+  /// Girdle outline (8 points, clockwise from the top-left).
+  static const outer = <Offset>[
+    Offset(.33, .05),
+    Offset(.67, .05),
+    Offset(.83, .21),
+    Offset(.83, .79),
+    Offset(.67, .95),
+    Offset(.33, .95),
+    Offset(.17, .79),
+    Offset(.17, .21),
   ];
 
-  static const outline = [
-    Offset(.28, .16),
-    Offset(.72, .16),
-    Offset(.94, .40),
-    Offset(.50, .90),
-    Offset(.06, .40),
+  /// Table (the note page); point i pairs with [outer] point i. The top-right
+  /// chamfer is the page's folded corner.
+  static const table = <Offset>[
+    Offset(.43, .27),
+    Offset(.53, .27),
+    Offset(.64, .38),
+    Offset(.64, .66),
+    Offset(.57, .73),
+    Offset(.43, .73),
+    Offset(.36, .66),
+    Offset(.36, .34),
   ];
 
-  static Path _path(List<Offset> pts, Size size) {
+  static const fold = <Offset>[
+    Offset(.53, .27),
+    Offset(.53, .38),
+    Offset(.64, .38),
+  ];
+
+  /// Step facets lit from the upper left: facet i joins outer i..i+1 to
+  /// table i+1..i.
+  static const facetColors = <Color>[
+    Color(0xFF5E95FF), // top
+    Color(0xFF2F6BF2), // top-right
+    Color(0xFF1E4FD0), // right
+    Color(0xFF163DA6), // bottom-right
+    Color(0xFF0F2D80), // bottom
+    Color(0xFF1A46BC), // bottom-left
+    Color(0xFF2F6BF2), // left
+    Color(0xFF8FB8FF), // top-left
+  ];
+  static const tableColor = Color(0xFFD6E4FF);
+  static const foldColor = Color(0xFF8FB8FF);
+
+  static Path path(List<Offset> pts, Size size) {
     final p = Path()..moveTo(pts[0].dx * size.width, pts[0].dy * size.height);
     for (final o in pts.skip(1)) {
       p.lineTo(o.dx * size.width, o.dy * size.height);
@@ -279,65 +310,38 @@ class SapphireMarkPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final gem = _path(outline, size);
-    for (final (pts, color) in facets) {
-      canvas.drawPath(_path(pts, size), Paint()..color = color);
+    for (var i = 0; i < 8; i++) {
+      final j = (i + 1) % 8;
+      canvas.drawPath(
+        path([outer[i], outer[j], table[j], table[i]], size),
+        Paint()
+          ..color = facetColors[i]
+          ..isAntiAlias = true,
+      );
     }
+    canvas.drawPath(path(table, size), Paint()..color = tableColor);
+    canvas.drawPath(path(fold, size), Paint()..color = foldColor);
     if (glint > 0 && glint < 1) {
+      final w = size.width;
       canvas.save();
-      canvas.clipPath(gem);
+      canvas.clipPath(path(outer, size));
       final x = (glint * 1.6 - 0.3) * w;
       canvas.drawRect(
         Offset.zero & size,
         Paint()
-          ..shader = LinearGradient(
+          ..shader = const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: const [
-              Color(0x00FFFFFF),
-              Color(0x66FFFFFF),
-              Color(0x00FFFFFF),
-            ],
-            stops: const [0, 0.5, 1],
+            colors: [Color(0x00FFFFFF), Color(0x40FFFFFF), Color(0x00FFFFFF)],
+            stops: [0, 0.5, 1],
           ).createShader(Rect.fromLTWH(x - w * 0.25, 0, w * 0.5, size.height)),
       );
       canvas.restore();
     }
-    // Hairline facet edges keep the cut readable at small sizes.
-    final edge = Paint()
-      ..color = const Color(0xFF17389A)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = w * 0.012
-      ..strokeJoin = StrokeJoin.round;
-    for (final (pts, _) in facets) {
-      canvas.drawPath(_path(pts, size), edge);
-    }
-    canvas.drawPath(
-      gem,
-      Paint()
-        ..color = const Color(0xFFE3EEFF)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = w * 0.03
-        ..strokeJoin = StrokeJoin.round,
-    );
-    if (sparkle) {
-      final c = Offset(w * 0.84, size.height * 0.13);
-      final r = w * 0.09;
-      final star = Path()
-        ..moveTo(c.dx, c.dy - r)
-        ..quadraticBezierTo(c.dx, c.dy, c.dx + r, c.dy)
-        ..quadraticBezierTo(c.dx, c.dy, c.dx, c.dy + r)
-        ..quadraticBezierTo(c.dx, c.dy, c.dx - r, c.dy)
-        ..quadraticBezierTo(c.dx, c.dy, c.dx, c.dy - r)
-        ..close();
-      canvas.drawPath(star, Paint()..color = const Color(0xFFF2F7FF));
-    }
   }
 
   @override
-  bool shouldRepaint(covariant SapphireMarkPainter old) =>
-      old.sparkle != sparkle || old.glint != glint;
+  bool shouldRepaint(covariant SapphireMarkPainter old) => old.glint != glint;
 }
 
 /// The mark with a slow light glint passing over it (static under reduced

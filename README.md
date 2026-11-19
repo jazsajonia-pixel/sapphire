@@ -56,9 +56,13 @@ Artifacts are kept for 30 days.
 
 ### Signing status
 
-Unless the repository owner configures a release keystore as GitHub secrets
-(see [`docs/RELEASE.md`](docs/RELEASE.md)), the CI APK is a **release-mode
-build signed with the Android debug key** generated on the CI runner. It is
+Since 1.2.0 the repository has a release keystore configured as GitHub
+secrets, so CI and Release APKs are signed with the stable Sapphire key
+(fingerprint in [`docs/RELEASE.md`](docs/RELEASE.md)) and later versions
+install over earlier ones. **Coming from 1.1.x or older, uninstall once**:
+those builds used per-run debug keys. Without the secrets (e.g. pull requests
+from forks), the CI APK is a **release-mode build signed with the Android
+debug key** generated on the CI runner. It is
 fine for personal testing but it is **not a production-signed release**. The
 CI run summary states which key was used. Because every runner may generate a
 different debug key, Android may refuse to install a newer CI APK over an

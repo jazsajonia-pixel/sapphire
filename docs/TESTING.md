@@ -88,4 +88,20 @@ Sign in with GitHub and automatic sync:
     and its last content is in note history. Delete one on the phone → it is
     deleted on GitHub.
 
+Version 1.2.0 (loading screen, view-first notes, find in note, new icon):
+
+35. Uninstall the old Sapphire, install 1.2.0. The launcher icon (and themed
+    icon on Android 13+) shows the new step-cut gem with a note page; the
+    same mark appears on the loading screen and Home.
+36. Launch with a vault and GitHub sync on: the loading screen shows
+    "Syncing with GitHub", "Indexing notes · n of m", "Arranging the graph",
+    then Home. Opening Brain, search and Graph needs no further waiting.
+37. Close and reopen: the loader is shorter (index restored, only changed
+    notes are read). Airplane mode: "Open now" appears after 4 s.
+38. Open a note: it shows rendered Markdown, not the editor. **Edit** opens
+    the editor; new notes open in the editor.
+39. In a note tap the search icon, type a word: "1 of n", matches highlighted,
+    up/down move between them and scroll. Works in view and in edit mode.
+    From Brain search, opening a result starts find with the search text.
+
 Please report the Android version and device model with any failure.

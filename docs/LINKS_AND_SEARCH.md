@@ -39,11 +39,36 @@ Not counted as note links: images, external URLs (`https:`, `mailto:`,
 - Files that cannot be read (e.g. larger than 8 MB) are listed under
   *Unlinked notes → Could not index*.
 
+- Since 1.2.0 the index is also saved to the app's private files
+  (`files/index/<vault hash>.json`) after it changes. On the next launch it
+  is restored first, so only notes whose size or modification time changed
+  since then are re-read. The cache is derived data: it never lives in the
+  vault, and deleting it (or uninstalling) only costs one full re-read.
+
 **Deviation from the original plan:** the project overview suggested a SQLite
-metadata database. The index is currently in memory and rebuilt on each app
-start, which keeps the vault the only source of truth and avoids a database
-dependency. If start-up indexing proves too slow on large vaults, a
-regenerable on-device cache can be added later without changing behaviour.
+metadata database. The index is kept in memory with the regenerable JSON cache
+above, which keeps the vault the only source of truth and avoids a database
+dependency.
+
+## Loading screen (1.2.0)
+
+When the app starts it shows a loading screen that does the start-up work
+before Home appears: open the remembered vault, run the first GitHub sync (if
+sync is set up and automatic sync is on), index every note, and lay out the
+global graph. The status line reports the real step and progress. There is
+no artificial delay; with no vault it disappears after one frame. **Open now**
+appears after 4 seconds, the sync step gives up after 40 seconds (offline or
+slow network) and the screen never stays longer than 90 seconds.
+
+## Find in note (1.2.0)
+
+Notes open in view mode (rendered Markdown); **Edit** (button or pencil)
+switches to the editor, and new notes open in the editor. The search icon in
+a note opens a find bar: case-insensitive, shows "n of m", next/previous wrap
+around, and the current match is scrolled into view. In view mode it searches
+the rendered text (matches that cross formatting, e.g. half bold, and text in
+code blocks are not found); in edit mode it searches the raw Markdown.
+Opening a note from vault search starts find with the search text.
 
 ## Search
 

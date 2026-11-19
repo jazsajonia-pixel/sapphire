@@ -8,7 +8,7 @@ emulator job (API 34) that runs the on-device tests in `integration_test/`.
 The APK is uploaded as the `sapphire-android-apk` artifact (30 days) together
 with its SHA-256 checksum. The run's summary page states how the APK was signed.
 
-- Version name: from `pubspec.yaml` (currently `1.1.2`; the full-globe camera release is pending CI and real-phone verification).
+- Version name: from `pubspec.yaml` (currently `1.2.0`).
 - Version code: the number of commits up to the built commit (same in CI
   and Release builds), so later builds can upgrade earlier ones **when signed
   with the same key**.
@@ -25,7 +25,7 @@ as pre-releases.
 
 ```sh
 git checkout main && git pull
-git tag v1.1.2 && git push origin v1.1.2
+git tag v1.2.0 && git push origin v1.2.0
 ```
 
 Release downloads do not expire (unlike CI artifacts, kept 30 days) and do
@@ -39,6 +39,23 @@ not require signing in to GitHub.
 | Release keystore configured as GitHub secrets | Your own stable key | Work normally (install over the old version) |
 
 No keystore, password, or signing credential is stored in the repository.
+
+### Current release key (since 1.2.0)
+
+From 1.2.0, CI and Release builds are signed with the Sapphire release key
+(configured 2026-11-19 as the four repository secrets below):
+
+| Item | Value |
+| --- | --- |
+| Alias | `sapphire` |
+| Certificate | `CN=Sapphire, O=Jazz Sajonia`, RSA 4096, valid until 2126 |
+| SHA-256 | `5B:02:39:7F:B4:31:82:23:E2:A2:5D:B3:CE:E7:F7:96:7E:D7:56:C0:EC:51:B6:33:3F:70:7C:57:0F:BA:38:0B` |
+
+Releases up to 1.1.1 were signed with per-run CI debug keys, which no longer
+exist, so 1.2.0 cannot install over them: **uninstall the old Sapphire once**,
+then install 1.2.0 (notes stay in the vault folder). Later releases signed
+with this key upgrade in place. The keystore backup is kept by the owner,
+outside any repository.
 
 ### Configure a stable release key (optional, owner action)
 

@@ -65,7 +65,7 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
       ref
           .read(vaultControllerProvider.notifier)
           .noteWritten(doc.path, doc.stamp);
-      if (mounted) await _openNote(doc.path);
+      if (mounted) await openNote(context, doc.path, edit: true);
     } on Exception catch (e) {
       _snack(describeVaultError(e));
     }

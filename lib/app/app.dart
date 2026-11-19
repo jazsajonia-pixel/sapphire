@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../features/search/index_controller.dart';
 import '../features/sync/sync_lifecycle.dart';
 import 'home_shell.dart';
+import 'startup_gate.dart';
 import 'theme.dart';
 
 class SapphireApp extends ConsumerWidget {
@@ -30,7 +31,7 @@ class SapphireApp extends ConsumerWidget {
         ),
         child: child!,
       ),
-      home: const SyncLifecycle(child: HomeShell()),
+      home: const SyncLifecycle(child: StartupGate(child: HomeShell())),
     );
   }
 }

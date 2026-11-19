@@ -1,9 +1,21 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/saf_vault_storage.dart';
 import '../../data/vault_storage.dart';
 import '../notes/note_codec.dart';
 import '../vault/vault_controller.dart';
+import 'index_cache.dart';
 import 'vault_index.dart';
+
+/// Where the index is kept between launches (app-private, not the vault).
+final indexCacheProvider = Provider<IndexCache>((ref) {
+  final storage = ref.watch(vaultStorageProvider);
+  if (storage is! SafVaultStorage) return MemoryIndexCache();
+  return FileIndexCache(() async => Directory(await storage.appFilesDir()));
+});
 
 class IndexState {
   const IndexState(
@@ -11,10 +23,15 @@ class IndexState {
     this.building = false,
     this.done = 0,
     this.total = 0,
+    this.ready = true,
   });
 
   final VaultIndex index;
   final bool building;
+
+  /// The index matches the current vault listing (false until the first
+  /// pass after start-up finished).
+  final bool ready;
   final int done;
   final int total;
 }
@@ -32,11 +49,31 @@ class IndexController extends Notifier<IndexState> {
   String? _vaultId;
   int _generation = 0;
 
+  /// Loads the saved index for [_vaultId] once per vault.
+  Future<List<CachedNote>>? _restoring;
+  bool _restored = false;
+
   @override
   IndexState build() {
     ref.listen<VaultState>(vaultControllerProvider, (_, next) => _sync(next));
     Future.microtask(() => _sync(ref.read(vaultControllerProvider)));
-    return IndexState(VaultIndex.empty);
+    return IndexState(VaultIndex.empty, ready: false);
+  }
+
+  void _persist() {
+    final id = _vaultId;
+    if (id == null) return;
+    unawaited(
+      ref.read(indexCacheProvider).save(id, [
+        for (final n in _cache.values)
+          CachedNote(
+            path: n.path,
+            text: n.text,
+            lastModified: n.lastModified,
+            size: n.size,
+          ),
+      ]),
+    );
   }
 
   /// Discards everything and re-reads all notes from the vault.
@@ -77,6 +114,31 @@ class IndexController extends Notifier<IndexState> {
       _cache.clear();
       _unreadable.clear();
       _vaultId = s.vault.id;
+      _restoring = null;
+      _restored = false;
+    }
+    if (!_restored) {
+      final id = s.vault.id;
+      state = IndexState(state.index, building: true, ready: false);
+      final saved = await (_restoring ??= ref
+          .read(indexCacheProvider)
+          .load(id));
+      if (!ref.mounted || _vaultId != id) return;
+      if (!_restored) {
+        _restored = true;
+        for (final n in saved) {
+          _cache.putIfAbsent(
+            n.path,
+            () => IndexedNote(
+              path: n.path,
+              text: n.text,
+              lastModified: n.lastModified,
+              size: n.size,
+            ),
+          );
+        }
+      }
+      if (gen != _generation) return; // a newer pass continues from here
     }
     final current = {for (final e in s.notes) e.path: e};
     var changed = force;
@@ -95,9 +157,13 @@ class IndexController extends Notifier<IndexState> {
           e,
     ];
     if (toRead.isEmpty) {
-      if (changed || state.index.notes.length != _cache.length) {
+      if (changed ||
+          !state.ready ||
+          state.building ||
+          state.index.notes.length != _cache.length) {
         state = IndexState(_build());
       }
+      if (changed) _persist();
       return;
     }
     final storage = ref.read(vaultStorageProvider);
@@ -134,5 +200,6 @@ class IndexController extends Notifier<IndexState> {
     }
     if (!ref.mounted || gen != _generation) return;
     state = IndexState(_build());
+    _persist();
   }
 }

@@ -15,6 +15,7 @@ import '../../app/theme.dart';
 import 'graph_layout.dart';
 import 'graph_model.dart';
 import 'graph_view.dart';
+import 'graph_warmup.dart';
 
 /// Global graph (all notes) or local graph (around [center]).
 class GraphScreen extends ConsumerStatefulWidget {
@@ -200,6 +201,21 @@ class _GraphScreenState extends ConsumerState<GraphScreen> {
     _builtCenter = _center;
     _builtDepth = _depth;
     _builtIsolated = _showIsolated;
+    final warm = _center == null && _showIsolated && _positions.isEmpty
+        ? ref.read(warmGraphProvider.notifier).forIndex(index)
+        : null;
+    if (warm != null) {
+      _data = warm.data;
+      _layoutGeneration++;
+      for (var i = 0; i < warm.data.nodes.length; i++) {
+        _positions[warm.data.nodes[i].path] = Offset(
+          warm.layout.x(i),
+          warm.layout.y(i),
+        );
+      }
+      _layout = warm.layout;
+      return;
+    }
     final data = _center != null && index.notes.containsKey(_center)
         ? GraphData.local(index, _center!, depth: _depth)
         : GraphData.global(index, includeIsolated: _showIsolated);
@@ -557,7 +573,7 @@ class _Legend extends StatelessWidget {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    dot(const Color(0xFF69E6C1)),
+                    dot(SapphireTheme.changed),
                     const SizedBox(width: 4),
                     Text('Changed in latest sync', style: small),
                   ],

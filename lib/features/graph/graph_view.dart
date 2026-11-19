@@ -1390,7 +1390,7 @@ class _GraphPainter extends CustomPainter {
         canvas.drawCircle(
           c,
           r * 2.5,
-          Paint()..color = const Color(0xFF69E6C1).withValues(alpha: 0.16),
+          Paint()..color = SapphireTheme.changed.withValues(alpha: 0.16),
         );
       }
       fill.color = color;
