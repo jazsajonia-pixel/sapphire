@@ -251,6 +251,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('graph-node-open')));
     await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Edit'));
+    await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const Key('note-editor')),
       'Now [[Gamma]]',

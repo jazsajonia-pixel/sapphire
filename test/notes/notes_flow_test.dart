@@ -64,6 +64,8 @@ void main() {
     await _openBrain(tester);
     await tester.tap(find.text('Welcome'));
     await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Edit'));
+    await tester.pumpAndSettle();
     final editor = find.byKey(const Key('note-editor'));
     expect(
       find.descendant(of: editor, matching: find.textContaining('Hello')),
@@ -86,14 +88,16 @@ void main() {
     expect(find.textContaining('Edited on phone.'), findsOneWidget);
   });
 
-  testWidgets('preview renders Markdown', (tester) async {
+  testWidgets('existing notes open in view mode with Markdown rendered', (
+    tester,
+  ) async {
     await pumpSapphire(tester, storage: _storage());
     await _openBrain(tester);
     await tester.tap(find.text('Welcome'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Preview'));
-    await tester.pumpAndSettle();
     expect(find.byKey(const Key('note-editor')), findsNothing);
+    expect(find.byKey(const Key('note-view')), findsOneWidget);
+    expect(find.byKey(const Key('note-edit-fab')), findsOneWidget);
     expect(find.textContaining('Hello', findRichText: true), findsWidgets);
   });
 
@@ -139,6 +143,8 @@ void main() {
     await _openBrain(tester);
     await tester.tap(find.text('Welcome'));
     await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Edit'));
+    await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('note-editor')), 'mine');
     await tester.pump();
     storage.setFile('Welcome.md', 'theirs');
@@ -160,6 +166,8 @@ void main() {
     await pumpSapphire(tester, storage: storage);
     await _openBrain(tester);
     await tester.tap(find.text('Welcome'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Edit'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('note-editor')), 'draft');
     await tester.pump();

@@ -12,6 +12,7 @@
 | 7 — Backup and hybrid sync | Done (CI + emulator launch) | PR #8. GitHub repository sync chosen by the owner (docs/SYNC.md). Fake-API tests plus a real GitHub API check on a temporary branch (in-memory vault, not a phone) |
 | 8 — Release hardening | Done for CI + emulator; real-device check pending | PR #9. Emulator flow tests (4/4 pass), optional stable signing via secrets, signer reported in CI summary, versionCode from CI run, docs/RELEASE.md. The owner still needs to run the real-phone checklist (docs/TESTING.md) |
 | 9 — Remote MCP server (owner request) | **Removed in Sapphire** | Replaced by direct GitHub sync (Phase 10). Was: PR #11 server (`mcp-server/`, Vercel): read tools + proposals only, 16 tests incl. end-to-end with the official MCP client, real GitHub API check. PR #12 app inbox (Settings → GitHub sync → AI app proposals). Not yet deployed to Vercel or used from a real AI app (needs the owner's accounts) |
+| 11 — 1.2.0: loading screen, view-first notes, find in note, new mark and palette, stable signing | CI pending at time of writing; real phone not yet | Start-up loader runs sync + indexing + graph layout before Home; regenerable index cache in app files; notes open in view mode; find in note (view + edit); new step-cut gem mark shared by launcher icon and in-app mark; "Deep Sapphire" palette; release key configured (docs/RELEASE.md) |
 | 10 — Sapphire: rebrand, GitHub sign-in, auto sync, new graph | Existing base done in CI; requested follow-up in PR #16, CI pending | Follow-up replaces periodic sync with a toggleable event-driven mode; persists latest successful changed paths for graph accents; improves finger-following 3D orbit around `Brain/00 - Home.md`; uses Jazz's supplied mark for adaptive, themed monochrome and legacy launcher icons. Real phone + real GitHub App not yet exercised |
 
 Testing levels are reported separately: unit/widget tests (CI), CI APK build,
@@ -34,8 +35,8 @@ behavior that was only compiled.
 - Choosing a real folder with the system picker and reading/writing real
   files via SAF has only been exercised by code paths shared with the
   emulator test, not by a full on-device flow.
-- APKs are debug-signed until a release keystore is configured
-  (docs/RELEASE.md); upgrades between CI builds may need an uninstall.
+- Since 1.2.0 APKs are signed with the stable release key; installing 1.2.0
+  over 1.1.x needs one uninstall (old builds used debug keys).
 - AI-inferred graph links are not implemented (edge kind reserved).
 - No streaming AI replies; sync runs while the app is open (not when fully closed).
 - License not chosen yet (LICENSE_DECISION.md).

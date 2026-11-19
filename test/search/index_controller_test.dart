@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:sapphire/data/memory_vault_storage.dart';
 import 'package:sapphire/data/vault_storage.dart';
+import 'package:sapphire/features/search/index_cache.dart';
 import 'package:sapphire/features/search/index_controller.dart';
 import 'package:sapphire/features/vault/vault_controller.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -110,4 +111,41 @@ void main() {
     await settle(c);
     expect(idx().index.notes, isEmpty);
   });
+
+  test(
+    'saved index is restored on the next launch without re-reading',
+    () async {
+      final cache = MemoryIndexCache();
+      final shared = CountingStorage(
+        files: {'A.md': 'links to [[B]]', 'B.md': 'plain'},
+        remembered: vault,
+      );
+      ProviderContainer launch() {
+        final k = ProviderContainer.test(
+          overrides: [
+            vaultStorageProvider.overrideWithValue(shared),
+            indexCacheProvider.overrideWithValue(cache),
+          ],
+        );
+        k.listen(indexControllerProvider, (_, _) {});
+        return k;
+      }
+
+      final first = launch();
+      await settle(first);
+      expect(shared.reads, 2);
+      expect(cache.data[vault.id], hasLength(2));
+      first.dispose();
+
+      shared.reads = 0;
+      shared.setFile('B.md', 'now links to [[A]]');
+      final second = launch();
+      await settle(second);
+      final state = second.read(indexControllerProvider);
+      expect(state.ready, isTrue);
+      expect(shared.reads, 1, reason: 'only the changed note is read');
+      expect(state.index.backlinks('A.md'), ['B.md']);
+      expect(state.index.backlinks('B.md'), ['A.md']);
+    },
+  );
 }

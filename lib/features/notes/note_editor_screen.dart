@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -10,6 +11,7 @@ import '../links/preview_links.dart';
 import '../search/index_controller.dart';
 import '../vault/vault_controller.dart';
 import 'markdown_preview.dart';
+import 'note_find.dart';
 import 'note_codec.dart';
 import 'note_navigation.dart';
 import 'note_repository.dart';
@@ -19,9 +21,20 @@ enum _ConflictChoice { saveCopy, reload, overwrite }
 enum _LeaveChoice { save, discard }
 
 class NoteEditorScreen extends ConsumerStatefulWidget {
-  const NoteEditorScreen({super.key, required this.path});
+  const NoteEditorScreen({
+    super.key,
+    required this.path,
+    this.edit = false,
+    this.find,
+  });
 
   final String path;
+
+  /// Open in edit mode (new notes). Otherwise the note opens in view mode.
+  final bool edit;
+
+  /// Start with find-in-note open for this text (e.g. from vault search).
+  final String? find;
 
   @override
   ConsumerState<NoteEditorScreen> createState() => _NoteEditorScreenState();
@@ -29,11 +42,22 @@ class NoteEditorScreen extends ConsumerStatefulWidget {
 
 class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen>
     with WidgetsBindingObserver {
-  final _text = TextEditingController();
+  final _text = HighlightingTextController();
   late String _path = widget.path;
   NoteDocument? _doc;
   Object? _loadError;
-  bool _preview = false;
+  late bool _preview = !widget.edit;
+
+  // Find in note.
+  late bool _finding = widget.find?.isNotEmpty ?? false;
+  late final _findText = TextEditingController(text: widget.find ?? '');
+  final _findFocus = FocusNode();
+  final _editorFocus = FocusNode();
+  final _editorScroll = ScrollController();
+  final _viewScroll = ScrollController();
+  final _editorKey = GlobalKey();
+  int _match = 0;
+  int _viewMatches = 0;
   bool _saving = false;
   bool _externallyChanged = false;
 
@@ -51,6 +75,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _text.addListener(() => setState(() {}));
+    _findText.addListener(_onFindChanged);
     _load();
   }
 
@@ -58,7 +83,100 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _text.dispose();
+    _findText.dispose();
+    _findFocus.dispose();
+    _editorFocus.dispose();
+    _editorScroll.dispose();
+    _viewScroll.dispose();
     super.dispose();
+  }
+
+  // ---- Find in note --------------------------------------------------------
+
+  String get _query => _finding ? _findText.text : '';
+
+  bool get _viewing => _preview || (_doc?.readOnly ?? false);
+
+  int get _matchTotal =>
+      _viewing ? _viewMatches : findMatches(_text.text, _query).length;
+
+  void _onFindChanged() {
+    setState(() => _match = 0);
+    _syncHighlights();
+  }
+
+  void _syncHighlights() {
+    final total = _matchTotal;
+    if (_match >= total) _match = total == 0 ? 0 : total - 1;
+    _text.setFind(_viewing ? '' : _query, _match);
+    if (!_viewing) _revealInEditor();
+  }
+
+  void _openFind() {
+    setState(() => _finding = true);
+    _findFocus.requestFocus();
+    _syncHighlights();
+  }
+
+  void _closeFind() {
+    setState(() {
+      _finding = false;
+      _match = 0;
+    });
+    _text.setFind('', -1);
+  }
+
+  void _step(int delta) {
+    final total = _matchTotal;
+    if (total == 0) return;
+    setState(() => _match = (_match + delta) % total);
+    _syncHighlights();
+  }
+
+  /// Scrolls the editor so the current match is visible, without moving
+  /// focus away from the find field.
+  void _revealInEditor() {
+    final starts = findMatches(_text.text, _query);
+    if (starts.isEmpty) return;
+    final start = starts[_match.clamp(0, starts.length - 1)];
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_editorScroll.hasClients) return;
+      final editable = _findRenderEditable(_editorKey.currentContext);
+      if (editable == null) return;
+      final caret = editable.getLocalRectForCaret(TextPosition(offset: start));
+      final viewport = _editorScroll.position.viewportDimension;
+      final target = (_editorScroll.offset + caret.top - viewport * 0.3).clamp(
+        0.0,
+        _editorScroll.position.maxScrollExtent,
+      );
+      _editorScroll.jumpTo(target);
+    });
+  }
+
+  static RenderEditable? _findRenderEditable(BuildContext? context) {
+    if (context == null) return null;
+    RenderEditable? found;
+    void visit(Element e) {
+      if (found != null) return;
+      final ro = e.renderObject;
+      if (ro is RenderEditable) {
+        found = ro;
+        return;
+      }
+      e.visitChildren(visit);
+    }
+
+    (context as Element).visitChildren(visit);
+    return found;
+  }
+
+  void _setPreview(bool preview) {
+    setState(() {
+      _preview = preview;
+      _match = 0;
+    });
+    _syncHighlights();
+    if (!preview && !_finding) _editorFocus.requestFocus();
   }
 
   @override
@@ -401,20 +519,43 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen>
       },
       child: Scaffold(
         appBar: AppBar(
-          title: Text(
-            (doc?.title ?? '') + (_dirty ? ' •' : ''),
-            overflow: TextOverflow.ellipsis,
-          ),
-          actions: [
-            if (doc != null) ...[
-              IconButton(
-                tooltip: _preview ? 'Edit' : 'Preview',
-                icon: Icon(
-                  _preview ? Icons.edit_outlined : Icons.visibility_outlined,
+          leading: _finding
+              ? IconButton(
+                  tooltip: 'Close find',
+                  icon: const Icon(Icons.close_rounded),
+                  onPressed: _closeFind,
+                )
+              : null,
+          titleSpacing: _finding ? 0 : null,
+          title: _finding
+              ? FindBar(
+                  controller: _findText,
+                  focusNode: _findFocus,
+                  current: _match,
+                  total: _matchTotal,
+                  onNext: () => _step(1),
+                  onPrevious: () => _step(-1),
+                )
+              : Text(
+                  (doc?.title ?? '') + (_dirty ? ' •' : ''),
+                  overflow: TextOverflow.ellipsis,
                 ),
-                onPressed: () => setState(() => _preview = !_preview),
+          actions: [
+            if (doc != null && !_finding) ...[
+              IconButton(
+                tooltip: 'Find in note',
+                icon: const Icon(Icons.search_rounded),
+                onPressed: _openFind,
               ),
               if (!doc.readOnly)
+                IconButton(
+                  tooltip: _preview ? 'Edit' : 'Preview',
+                  icon: Icon(
+                    _preview ? Icons.edit_outlined : Icons.visibility_outlined,
+                  ),
+                  onPressed: () => _setPreview(!_preview),
+                ),
+              if (!doc.readOnly && (_dirty || !_preview))
                 IconButton(
                   tooltip: 'Save',
                   icon: _saving
@@ -460,6 +601,15 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen>
           ],
         ),
         body: _body(doc),
+        floatingActionButton:
+            doc != null && !doc.readOnly && _preview && !_finding
+            ? FloatingActionButton.extended(
+                key: const Key('note-edit-fab'),
+                onPressed: () => _setPreview(false),
+                icon: const Icon(Icons.edit_outlined),
+                label: const Text('Edit'),
+              )
+            : null,
       ),
     );
   }
@@ -494,7 +644,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen>
           actions: [TextButton(onPressed: _save, child: const Text('Resolve'))],
         ),
     ];
-    final content = _preview || doc.readOnly
+    final content = _viewing
         ? MarkdownPreview(
             text: PreviewLinks.prepare(
               _text.text,
@@ -502,10 +652,22 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen>
               ref.watch(indexControllerProvider).index,
             ),
             onTapLink: _onPreviewLink,
+            find: _query,
+            currentMatch: _match,
+            scrollController: _viewScroll,
+            onMatchCount: (n) {
+              if (!mounted || n == _viewMatches) return;
+              setState(() {
+                _viewMatches = n;
+                if (_match >= n) _match = n == 0 ? 0 : n - 1;
+              });
+            },
           )
         : TextField(
             key: const Key('note-editor'),
             controller: _text,
+            focusNode: _editorFocus,
+            scrollController: _editorScroll,
             expands: true,
             maxLines: null,
             minLines: null,
@@ -521,7 +683,9 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen>
     return Column(
       children: [
         ...banners,
-        Expanded(child: content),
+        Expanded(
+          child: KeyedSubtree(key: _editorKey, child: content),
+        ),
       ],
     );
   }

@@ -85,8 +85,6 @@ void main() {
     await _brain(tester);
     await tester.tap(find.text('Start'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Preview'));
-    await tester.pumpAndSettle();
     final link = find.textContaining('the app', findRichText: true);
     expect(link, findsWidgets);
     await tester.tapOnText(find.textRange.ofSubstring('the app'));
@@ -112,6 +110,8 @@ void main() {
     await pumpSapphire(tester, storage: _storage());
     await _brain(tester);
     await tester.tap(find.text('Recipes'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Edit'));
     await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const Key('note-editor')),

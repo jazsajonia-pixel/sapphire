@@ -5,6 +5,7 @@ import '../../core/ui/state_views.dart';
 import '../../core/vault/vault_path.dart';
 import '../notes/note_navigation.dart';
 import 'index_controller.dart';
+import 'vault_index.dart';
 
 class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
@@ -20,6 +21,18 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   void dispose() {
     _query.dispose();
     super.dispose();
+  }
+
+  /// The text to highlight inside the opened note: the whole query when it
+  /// appears as typed, otherwise its first word that does.
+  String? _findTerm(VaultIndex index, String path) {
+    final q = _query.text.trim();
+    final text = index.notes[path]?.lowerText ?? '';
+    if (text.contains(q.toLowerCase())) return q;
+    for (final t in q.split(RegExp(r'\s+'))) {
+      if (t.isNotEmpty && text.contains(t.toLowerCase())) return t;
+    }
+    return null;
   }
 
   @override
@@ -80,7 +93,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     overflow: TextOverflow.ellipsis,
                   ),
                   isThreeLine: dir.isNotEmpty && h.snippet != null,
-                  onTap: () => openNote(context, h.path),
+                  onTap: () => openNote(
+                    context,
+                    h.path,
+                    find: h.snippet != null
+                        ? _findTerm(idx.index, h.path)
+                        : null,
+                  ),
                 );
               },
             ),

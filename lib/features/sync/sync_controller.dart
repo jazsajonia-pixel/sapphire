@@ -244,6 +244,30 @@ class SyncController extends Notifier<SyncUiState> {
 
   DateTime? _lastAuto;
 
+  /// The sync currently running, so callers can wait for it.
+  Future<SyncReport?>? _inFlight;
+  final Completer<void> _loaded = Completer<void>();
+
+  /// Whether this session already ran (or skipped) its first automatic sync.
+  bool _startupDone = false;
+
+  /// Runs (or joins) the first automatic sync of this session and completes
+  /// when it is finished. Completes immediately when automatic sync is off,
+  /// not configured or no vault is open. Used by the loading screen.
+  Future<void> startupSync() async {
+    await _loaded.future;
+    if (!ref.mounted) return;
+    final running = _inFlight;
+    if (running != null) {
+      await running;
+      return;
+    }
+    if (_startupDone || !_autoReady) return;
+    if (ref.read(vaultControllerProvider) is! VaultReady) return;
+    _lastAuto = DateTime.now();
+    await syncNow(automatic: true);
+  }
+
   @override
   SyncUiState build() {
     ref.onDispose(() {
@@ -298,6 +322,7 @@ class SyncController extends Notifier<SyncUiState> {
     if (!ref.mounted) return;
     state = state.copyWith(loaded: true, settings: s);
     await _loadLastSync();
+    if (!_loaded.isCompleted) _loaded.complete();
     autoSync();
   }
 
@@ -638,9 +663,18 @@ class SyncController extends Notifier<SyncUiState> {
     unawaited(syncNow(automatic: true));
   }
 
-  Future<SyncReport?> syncNow({bool automatic = false}) async {
+  Future<SyncReport?> syncNow({bool automatic = false}) {
+    if (state.running) return Future.value();
+    final run = _syncNow(automatic: automatic);
+    _inFlight = run;
+    return run.whenComplete(() {
+      if (identical(_inFlight, run)) _inFlight = null;
+      _startupDone = true;
+    });
+  }
+
+  Future<SyncReport?> _syncNow({required bool automatic}) async {
     final s = state.settings;
-    if (state.running) return null;
     if (!s.enabled || !s.configured) {
       if (!automatic) {
         state = state.copyWith(

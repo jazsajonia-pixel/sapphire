@@ -137,7 +137,7 @@ class _Hero extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF16275A), Color(0xFF0C1430)],
+          colors: [Color(0xFF142A6B), Color(0xFF0B1224)],
         ),
         border: Border.all(color: scheme.outlineVariant),
       ),
@@ -215,7 +215,7 @@ class _SyncCard extends StatelessWidget {
       ),
       _ => (
         Icons.cloud_done_rounded,
-        const Color(0xFF5BE0B3),
+        SapphireTheme.changed,
         'Synced with ${s.repoName}',
         '${sync.lastSync == null ? 'Not synced yet' : 'Last sync ${_ago(sync.lastSync!)}'}'
             '${s.autoSync ? ' · auto on detected changes' : ' · manual'}',
